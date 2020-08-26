@@ -1,7 +1,7 @@
 require('dotenv').config()
 const puppeteer = require('puppeteer');
 const mongoose = require('mongoose');
-const Post = require('./models/post');
+const Post = require('./models/map');
 
 //==========================================================================================
 //check for run time 
@@ -17,7 +17,7 @@ performance.mark('A');
 //check for run time 
 //==========================================================================================
 
-mongoose.connect(process.env.DATABASE_LOCAL_FB, {
+mongoose.connect(process.env.DATABASE_LOCAL_MAP, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
         useFindAndModify: false,
@@ -25,7 +25,6 @@ mongoose.connect(process.env.DATABASE_LOCAL_FB, {
     })
     .then(() => console.log('MongoDB Connected...'))
     .catch(err => console.log(err));
-var groupUrl = process.env.GROUP_URL
 try {
     (async () => {
         // Viewport && Window size
@@ -45,16 +44,9 @@ try {
         })
 
         const context = browser.defaultBrowserContext();
-        context.overridePermissions("https://www.facebook.com", ["geolocation", "notifications"]);
+        context.overridePermissions("https://www.google.com/maps", ["geolocation", "notifications"]);
         let page = await browser.newPage();
         await page.setViewport({ width: width, height: width });
-
-        //登入只有第一次需要做。
-        /* await page.goto("https://www.facebook.com");
-        await page.type('#email', FB_USER, { delay: DELAY_USER_INPUT });
-        await page.type('#pass', FB_PW, { delay: DELAY_PW_INPUT });
-        await page.click("#u_0_b");
-        await page.waitFor(1000); */
 
         await page.goto(groupUrl);
         await page.waitForSelector("#m_group_stories_container")

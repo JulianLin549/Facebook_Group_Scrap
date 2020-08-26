@@ -6,8 +6,7 @@ const Post = require('./models/post');
 const WAIT_FOR_PAGE = 5000;
 const DELAY_USER_INPUT = 20;
 const DELAY_PW_INPUT = 10;
-const FB_USER = 'julianlin549@gmail.com';
-const FB_PW = 'Test7625';
+
 
 //==========================================================================================
 //check for run time 
@@ -23,7 +22,7 @@ performance.mark('A');
 //check for run time 
 //==========================================================================================
 
-mongoose.connect("mongodb://localhost:27017/fb_scrap", {
+mongoose.connect(process.env.DATABASE_LOCAL_FB, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
         useFindAndModify: false,
@@ -57,8 +56,8 @@ try {
 
         //登入只有第一次需要做。
         /* await page.goto("https://www.facebook.com");
-        await page.type('#email', FB_USER, { delay: DELAY_USER_INPUT });
-        await page.type('#pass', FB_PW, { delay: DELAY_PW_INPUT });
+        await page.type('#email', process.env.FB_USER, { delay: DELAY_USER_INPUT });
+        await page.type('#pass', process.env.FB_PW, { delay: DELAY_PW_INPUT });
         await page.click("#u_0_b");
         await page.waitFor(1000); */
 
