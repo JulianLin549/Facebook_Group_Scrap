@@ -1,3 +1,5 @@
+圖文:https://www.notion.so/puppeteer-f36071b57f1c480dac86f0b05643c317
+
 # 爬蟲puppeteer爬臉書社團
 
 因為要做專案需要某個私密臉書社團的資料，而我也不是該社團的管理員，所以無法使用臉書提供的GraphAPI，(如果可以用GraphAPI將會方便很多。)
