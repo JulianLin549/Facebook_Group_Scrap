@@ -1,11 +1,6 @@
 const puppeteer = require('puppeteer');
-const fs = require('fs');
-const pupModules = require('./pupModules');
 const mongoose = require('mongoose');
 const Post = require('./models/post');
-const WAIT_FOR_PAGE = 5000;
-const DELAY_USER_INPUT = 20;
-const DELAY_PW_INPUT = 10;
 
 
 //==========================================================================================
@@ -165,7 +160,7 @@ try {
 
                 await page.waitForXPath('//*[@id="m_story_permalink_view"]/div[1]/div[1]/div[1]');
                 //東西都在'//*[@id="m_story_permalink_view"]/div[1]/div[1]/div[1]/div'
-                //文字部分
+                //文字部分，可以看要不要保留HTML format
                 let [div1] = await page.$x('//*[@id="m_story_permalink_view"]/div[1]/div[1]/div[1]/div[1]');
                 let div1Text = await page.evaluate(div1 => div1.innerText, div1);
 

@@ -1,7 +1,7 @@
 require('dotenv').config()
 const puppeteer = require('puppeteer');
 const mongoose = require('mongoose');
-const Post = require('./models/map');
+const Map = require('./models/map');
 
 //==========================================================================================
 //check for run time 
@@ -16,7 +16,7 @@ performance.mark('A');
 //==========================================================================================
 //check for run time 
 //==========================================================================================
-
+var DELAY_TIME = 400
 mongoose.connect(process.env.DATABASE_LOCAL_MAP, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
@@ -40,7 +40,7 @@ try {
                 width,
                 height
             },
-            userDataDir: "./userData"
+            executablePath: 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe'
         })
 
         const context = browser.defaultBrowserContext();
@@ -48,217 +48,119 @@ try {
         let page = await browser.newPage();
         await page.setViewport({ width: width, height: width });
 
-        await page.goto(groupUrl);
-        await page.waitForSelector("#m_group_stories_container")
+        await page.goto(process.env.MAP_URL);
+        await page.waitForXPath('//*[@id="legendPanel"]/div/div/div[2]/div/div/div[2]')
 
-        //=====================================================
-        // 下一頁按鈕一直按到底
-        //=====================================================
-        try {
-            while (await page.$('#m_group_stories_container > section > article')) {
-                //=====================================================
-                // 取得貼文ID以及貼文作者
-                //=====================================================
-                try {
-                    const HTMLText = await page.evaluate(() => {
-                        let data = []
-                        const list = document.querySelectorAll('#m_group_stories_container > section > article');
-                        for (const a of list) {
-                            data.push(a.innerHTML)
-                        }
-                        return data;
-                    })
 
-                    //postLinks 裡面有所有當頁貼文的 link
-                    var postLinks = [];
 
-                    for (const post of HTMLText) {
-
-                        //=====================================================
-                        //             author
-                        //=====================================================
-                        let authorAtag = post.match(/<a[^>]*>([^<]+)<\/a>/)[0];
-                        let author = ''
-                        //<a href="/profile.php?id=100003944326911 這種
-                        if (authorAtag.includes('profile.php?id=')) {
-                            author = authorAtag.match(/profile\.php\?id=\d+/)[0];
-                        }
-                        //<a href="/stars.yang 這種
-                        else if (/\/[^\/]+\?/.test(authorAtag)) {
-                            author = authorAtag.match(/\/(.*)\?/)[0];
-                            author = author.slice(1, -1);
-                        }
-                        //粉專帳號
-                        else {
-                            continue
-                        }
-
-                        //=====================================================
-                        //             postId
-                        //=====================================================
-                        let atagToFullPost = post.match(/<a[^>]*>完整動態<\/a>/g)[0];
-                        //postId = 當篇貼文Id
-                        let postId = atagToFullPost.match(/;id=[0-9]*/)[0];
-                        postId = postId.replace(';id=', '');
-
-                        //=====================================================
-                        //             Check post in DB
-                        //=====================================================
-                        let findPost = await Post.findOne({ postId: postId });
-                        if (findPost) {
-                            console.log(`Post ${postId} already exist in Database`)
-                        } else {
-                            try {
-                                //存入DB
-                                let newPost = new Post({ postId, author })
-                                await newPost.save();
-                            } catch (error) {
-                                console.log(error)
-                            }
-                        }
-                    }
-                } catch (error) {
-                    console.log('error in func.getPostAndAuthorLink')
-                    console.log(error)
-                    await browser.close();
+        //let regions = Array.from(document.querySelectorAll('#legendPanel > div > div > div > div > div > div > div > div > div.HzV7m-pbTTYe-r4nke'));
+        //找到所有的連結按鈕
+        //let stores = Array.from(document.querySelectorAll('#legendPanel > div > div > div > div > div >  div > div > div > div > .HzV7m-pbTTYe-ibnC6b'));
+        //console.log(stores[5].children[1]): 
+        //<div class="HzV7m-pbTTYe-ibnC6b-V67aGc">
+        //  <div class="suEOdc" data-tooltip="白露拉麵 bailu ramen(0522試營運)" aria-label="白露拉麵 bailu ramen(0522試營運)">白露拉麵 bailu ramen(0522試營運)</div>
+        //</div>
+        //找到所有的地區innerText 
+        /* await page.evaluate(() => {
+            let regions = Array.from(document.querySelectorAll('#legendPanel > div > div > div > div > div > div > div > div > div.HzV7m-pbTTYe-r4nke'));
+            for (let i = 0; i < regions.length; i++) {
+                console.log(regions[i].innerText)
+                let stores = document.querySelectorAll(`#legendPanel > div > div > div:nth-child(2) > div > div > div:nth-child(2) > div:nth-child(${i+1}) > div >div:nth-child(3) > div.pbTTYe-ibnC6b-d6wfac`);
+                for (store of stores) {
+                    console.log(window.location.href)
+                    console.log(store.innerText);
+                    //page.click(store)
+                    store.click();
+                    let featurePanel = document.querySelectorAll('#featurecardPanel > div > div > div.qqvbed-bN97Pc > div.qqvbed-UmHwN > div');
+                    console.log(featurePanel)
+                    let backButton = document.querySelectorAll('#featurecardPanel > div > div > div.qqvbed-tJHJj > div.HzV7m-tJHJj-LgbsSe-haAclf.qqvbed-a4fUwd-LgbsSe-haAclf > div')
+                    backButton[0].click()
                 }
-                await page.click('#m_group_stories_container > div > a')
-                await page.waitForSelector('#m_group_stories_container')
             }
-        } catch (error) {
-            //跳出while 所有頁面都做完。
-            console.log('\n')
-            console.log('==========================================================================================')
-            console.log('||                        Finish retreving postId and author Id.                         ||')
-            console.log('||                        Starting retreving img and description.                        ||')
-            console.log('==========================================================================================')
-            console.log('\n')
-            performance.mark('B');
-            performance.measure('A to B (ms):', 'A', 'B');
-            console.log('\n')
+        }) */
+        //還有更多先點開
+        const moreBtns = await page.$$('#legendPanel > div > div > div > div > div > div> div > div > div> div> span');
+        for (moreBtn of moreBtns) {
+            await moreBtn.click()
         }
+        const regions = await page.$$('#legendPanel > div > div > div > div > div > div > div > div > div.HzV7m-pbTTYe-r4nke');
+        for (let i = 0; i < regions.length; i++) {
+            let regionName = await page.evaluate(element => element.innerText, regions[i]); //*************地區*************
+            const stores = await page.$$(`#legendPanel > div > div > div:nth-child(2) > div > div > div:nth-child(2) > div:nth-child(${i+1}) > div >div:nth-child(3) > div.pbTTYe-ibnC6b-d6wfac`);
+            for (storeLink of stores) {
+                let storeName = await page.evaluate(element => element.innerText, storeLink); //*************店名*************
+                //去商店的連結
+                await storeLink.click()
+                await page.waitFor(DELAY_TIME)
 
-        //=====================================================
-        // 去每個完整貼文取HTML/Text
-        //=====================================================
-        let allPost = await Post.find({});
-        for await (const postObj of allPost) {
-            try {
-                //await page.waitFor(10);
-                await page.goto(groupUrl + '/permalink/' + postObj.postId);
-                await page.waitForSelector("#m_story_permalink_view")
-                //*[@id="m_story_permalink_view"]/div[1]/div[1]//div[1]
+                await page.waitForSelector('#featurecardPanel>div>div>div:nth-child(4) > div:nth-child(1)>div:nth-child(2)>div:nth-child(2)');
+                let descriptionLink = await page.$('#featurecardPanel>div>div>div:nth-child(4) > div:nth-child(1)>div:nth-child(2)>div:nth-child(2)');
+                let descriptionHTML = await page.evaluate(element => element.innerHTML, descriptionLink); //**********文字HTML************
+                let descriptionText = await page.evaluate(element => element.innerText, descriptionLink); //**********文字TEXT************
 
-                await page.waitForXPath('//*[@id="m_story_permalink_view"]/div[1]/div[1]/div[1]');
-                //東西都在'//*[@id="m_story_permalink_view"]/div[1]/div[1]/div[1]/div'
-                //文字部分
-                let [div1] = await page.$x('//*[@id="m_story_permalink_view"]/div[1]/div[1]/div[1]/div[1]');
-                let div1Text = await page.evaluate(div1 => div1.innerText, div1);
-
-                //如果沒有店家|店名關鍵字，跳過這篇
-                if (!/店家|店名/.test(div1Text)) {
-                    continue
+                let addressTag = await page.$('#featurecardPanel > div > div > div:nth-child(4) > div:nth-child(2) > div:nth-child(2)');
+                var address = ''
+                console.log(addressTag)
+                if (addressTag) {
+                    address = await page.evaluate(element => element.innerText, addressTag); //*************地址*************
+                    console.log(address)
                 }
-                //其他可能是分享文或是圖片。
-                let [div2] = await page.$x('//*[@id="m_story_permalink_view"]/div[1]/div[1]/div[1]/div[2]');
-                if (div2) {
-                    var div2Other = await page.evaluate(div2 => div2.innerHTML, div2);
-                    var imgaTag = div2Other.match(/<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1/g);
-                };
+                let url = page.url()
+                let location = url.match(/\=\d*\.\d*\%2C\d*\.\d*/)
+                location = location[0].match(/\d*\.\d*/g)
+                location = [parseFloat(location[1]), parseFloat(location[0])] //  [ '25.02629050000002', '121.47718700000001' ]  前lat後lon
 
-                //單一貼文的img們
+                //=========================================================
+                //    存入DB
+                //=========================================================
 
-                if (imgaTag) {
-                    var img = []
-                    for await (let fbImgLink of imgaTag) {
-                        //如果是照片的tag的話
-                        if (/\/photo.php?(.*?)\"/.test(fbImgLink)) {
-                            fbImgLink = fbImgLink.match(/\/photo.php?(.*?)\"/)[0];
-                            fbImgLink = fbImgLink.slice(1, -1);
-                            //await console.log(fbImgLink);
-                            await console.log('https://facebook.com/' + fbImgLink)
-                            await page.goto('https://facebook.com/' + fbImgLink);
-                            await page.waitForXPath('//img[@class="spotlight"]');
 
-                            let [div3] = await page.$x('//img[@class="spotlight"]/..');
-                            if (div3) {
-                                var imgDiv = await page.evaluate(div3 => div3.innerHTML, div3)
-                            };
-
-                            let imgURL = imgDiv.match(/\"https(.*?)\"/)[0]
-                            imgURL = imgURL.slice(1, -1);
-                            //因為FB的照片有escape char 所以要decode
-                            function decodeHTML(encodedString) {
-                                return new Promise((resolve, reject) => {
-                                    try {
-                                        var translate_re = /&(nbsp|amp|quot|lt|gt);/g;
-                                        var translate = {
-                                            "nbsp": " ",
-                                            "amp": "&",
-                                            "quot": "\"",
-                                            "lt": "<",
-                                            "gt": ">"
-                                        };
-
-                                        var result = encodedString.replace(translate_re, function(match, entity) {
-                                            return translate[entity];
-                                        }).replace(/&#(\d+);/gi, function(match, numStr) {
-                                            var num = parseInt(numStr, 10);
-                                            return String.fromCharCode(num);
-                                        });
-                                        resolve(result)
-                                    } catch (error) {
-                                        reject(error)
-                                    }
-                                })
-                            }
-
-                            imgURL = await decodeHTML(imgURL);
-                            //await console.log(imgURL);
-                            await img.push(imgURL)
-                        }
+                let findMap = await Map.findOne({ storeName });
+                if (findMap) {
+                    console.log(`店家 ${storeName} 早就存在。`)
+                } else {
+                    try {
+                        //存入DB
+                        let newStore = new Map({
+                            storeName: storeName,
+                            region: regionName,
+                            descriptionHTML: descriptionHTML,
+                            descriptionText: descriptionText,
+                            location: {
+                                type: 'Point',
+                                coordinates: [location[0], location[1]],
+                                formattedAddress: address
+                            },
+                        })
+                        await newStore.save();
+                    } catch (error) {
+                        console.log(error)
                     }
                 }
 
-                //await console.log(img);
-                //await console.log(div1Text);
-                let data = {}
-                if (img) {
-                    data['imageURLs'] = img
-                }
-                if (div1Text) {
-                    data['description'] = div1Text
-                }
-                await Post.findByIdAndUpdate(postObj._id, data);
-                await console.log(`updating _id: ${postObj._id}`);
-                //Reset values
-                [div1Text, div2Other] = await Promise.all(['', '']);
-
-
-            } catch (error) {
-                console.log('error in func.getDescriptionAndImageURL')
-                console.log(error)
-                await browser.close();
+                //上一頁
+                await page.waitForSelector('#featurecardPanel > div > div >div:nth-child(3) > div:nth-child(1) > div:nth-child(1)');
+                let backBtn = await page.$('#featurecardPanel > div > div >div:nth-child(3) > div:nth-child(1) > div:nth-child(1)');
+                await backBtn.click();
+                await page.waitFor(DELAY_TIME)
             }
         }
-        await browser.close();
-        //=====================================================
-        //  把不相關的貼文砍掉
-        //=====================================================
-        await Post.find({ description: '' }).deleteMany()
-        //await console.log('delete empty dexcription post')
 
-        //=====================================================
-        //check for run time 
-        //=====================================================
-        console.log('\n')
-        console.log('==========================================================================================')
-        console.log("||                          Finish retreving img and description.                        ||")
-        console.log("||                           Process Complete!                                           ||")
-        console.log('=========================================================================================')
-        performance.mark('C');
-        performance.measure('A to C (ms)', 'A', 'C');
-        //await browser.close();
+
+
+        /* await example[3].click();
+        await page.waitFor(10000)
+
+
+        await page.waitForSelector('#featurecardPanel > div > div >div:nth-child(3) > div:nth-child(1) > div:nth-child(1)')
+        const back = await page.$('#featurecardPanel > div > div >div:nth-child(3) > div:nth-child(1) > div:nth-child(1)');
+        await back.click() */
+        function log(element) {
+            return new Promise((resolve, reject) => {
+                return resolve(element)
+
+            })
+        }
     })();
 
 

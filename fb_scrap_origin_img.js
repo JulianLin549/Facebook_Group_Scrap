@@ -159,7 +159,7 @@ try {
 
                 await page.waitForXPath('//*[@id="m_story_permalink_view"]/div[1]/div[1]/div[1]');
                 //東西都在'//*[@id="m_story_permalink_view"]/div[1]/div[1]/div[1]/div'
-                //文字部分
+                //文字部分，可以看要不要保留HTML format
                 let [div1] = await page.$x('//*[@id="m_story_permalink_view"]/div[1]/div[1]/div[1]/div[1]');
                 let div1Text = await page.evaluate(div1 => div1.innerText, div1);
 
